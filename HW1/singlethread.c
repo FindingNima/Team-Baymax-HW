@@ -11,11 +11,11 @@
 #define FALSE 0
 
 // prototypes
-void producer();
-void consumer();
-int produce_item();
+void producer(void);
+void consumer(void);
+int produce_item(void);
 void insert_item(int);
-int remove_item();
+int remove_item(void);
 void consume_item(int);
 
 int count = 0;
@@ -26,18 +26,21 @@ int produce_item() {
 	return rand();	
 }
 
+
 // will put generated random integer into array
 void insert_item(int item) {
-	items_array[count] = item;
+	items_array[count++] = item;
 }
 
 // will remove integer at iteration and will return the value
 int remove_item() {
-	return items_array[count];
+	return items_array[--count];
 }
+
 void consume_item(int item) {
-	printf("%d\n",item);
+	printf("Consumed: %d\n",item);
 }
+
 
 // ==== Producer  ===========================================================
 //	If the count reaches N the function will stop running to let the
@@ -50,7 +53,7 @@ void producer() {
 		item = produce_item();
 		if (count == N) return;
 		insert_item(item);
-		count = count + 1;
+		printf("Produced: %d\n",item);
 	}
 }
 
@@ -63,7 +66,6 @@ void consumer() {
 	int item;
 	while (TRUE) {
 		if (count == 0) return;
-		count = count - 1;
 		item = remove_item();
 		consume_item(item);
 	}
@@ -74,7 +76,6 @@ void consumer() {
 //	It continuously calls the Producer and Consumer functions forever.	
 // ==========================================================================
 int main() {
-	//items_array = (int*) malloc(N);
 	while (TRUE) {
 		producer();
 		consumer();
