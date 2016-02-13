@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// HW2: Consumer Producer Problem
+// HW2: Consumer Producer Problem with multiple buffers
 // Authors: Emily Le, Max Wolotsky, Daniel
 // ----------------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ void consume_item(int);
 
 int main(int argc, char const *argv[])
 {
-	if (argc < 5)  
+	if (argc < 5 || argc == 0)  
 		return 1;
 
 	#ifdef DEBUG
@@ -159,22 +159,14 @@ int main(int argc, char const *argv[])
 	return 0;
 }
 
-int produce_item() {
-	return rand();
-}
-
-void insert_item(int num, int item) {
-	bufferList[num][counts[num]++] = item;
-}
-
-int remove_item(num) {
-	return bufferList[num][--counts[num]];
-}
-
-void consume_item(int item) {
-	//printf("Consumed: %d\n",item);
-}
-
+// ----------------------------------------------------------------------------
+// PRODUCER:
+//		Your producers should be able to constantly produce items up to 1024 
+//		in each shared buffer. If all buffers are full and it is the producers 
+//		turn to run it will yield, put itself to sleep.  If there are no more 
+//		items to produce the producer should print “Producer Thread # is 
+//		finished “  and terminate itself.
+// ----------------------------------------------------------------------------
 void producer(void *num) {
 	int item;
 	while (num_of_items > 0) {
@@ -213,6 +205,24 @@ void producer(void *num) {
 	printf("Producer Thread %s is finished\n",(char*)num);
 }
 
+int produce_item() {
+	return rand();
+}
+
+void insert_item(int num, int item) {
+	bufferList[num][counts[num]++] = item;
+}
+
+// ----------------------------------------------------------------------------
+// CONSUMER:
+//		Your consumer should be able to read from any of the shared buffers 
+//		when it is its turn to run. If all buffers are empty and the 
+//		BufferPrinter thread is still running and it is the consumers turn to 
+//		run it will print “Consumer Thread # is Yielding “ and will yield, put 
+//		itself to sleep.  If there are no more items to consume, the BufferPrinter 
+//		is not running the consumer should print that it has finished, print 
+//		“Consumer Thread # is finished “ and terminate itself.
+// ----------------------------------------------------------------------------
 void consumer(void * num) {
 	int item;
 
@@ -245,25 +255,14 @@ void consumer(void * num) {
 	}
 	printf("Consumer Thread %s is Finished\n",(char*)num);
 }
-// ----------------------------------------------------------------------------
-// PRODUCER:
-//		Your producers should be able to constantly produce items up to 1024 
-//		in each shared buffer. If all buffers are full and it is the producers 
-//		turn to run it will yield, put itself to sleep.  If there are no more 
-//		items to produce the producer should print “Producer Thread # is 
-//		finished “  and terminate itself.
-// ----------------------------------------------------------------------------
 
-// ----------------------------------------------------------------------------
-// CONSUMER:
-//		Your consumer should be able to read from any of the shared buffers 
-//		when it is its turn to run. If all buffers are empty and the 
-//		BufferPrinter thread is still running and it is the consumers turn to 
-//		run it will print “Consumer Thread # is Yielding “ and will yield, put 
-//		itself to sleep.  If there are no more items to consume, the BufferPrinter 
-//		is not running the consumer should print that it has finished, print 
-//		“Consumer Thread # is finished “ and terminate itself.
-// ----------------------------------------------------------------------------
+int remove_item(num) {
+	return bufferList[num][--counts[num]];
+}
+
+void consume_item(int item) {
+	//printf("Consumed: %d\n",item);
+}
 
 // ----------------------------------------------------------------------------
 // BUFFERPRINTER:
