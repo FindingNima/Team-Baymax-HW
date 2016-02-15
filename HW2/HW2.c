@@ -17,19 +17,20 @@
 // global variables
 int num_of_producers;		// number of producers
 int num_of_consumers;		// number of consumers
-int num_of_buffers;		// number of buffers
-int num_of_items;  		// number of items
-int maximum;
+int num_of_buffers;			// number of buffers
+int num_of_items;  			// number of items (will decrement)
+int maximum;				// maximum = number of items (won't decrement)
 
-sem_t *mutexes;
+sem_t *mutexes;				
 sem_t *empties;
 sem_t *fulls;
+sem_t print_sem;			// print buffer semephore
 pthread_t *prod_id;
 pthread_t *cons_id;
 
 // holds all the buffers
-int **bufferList;
-int *counts;
+int **bufferList;			// holds all the buffers
+int *buffer_idx;				// holds the number of items in each buffer
 
 // prototypes
 void bufferprinter(void);
@@ -61,15 +62,14 @@ int main(int argc, char const *argv[])
 	#endif
 
 	//initialize buffers
-	int j;
-	//printf("Counts\n");
-	counts = (int *) malloc(num_of_buffers * sizeof(int*));
-	//printf("bufferList\n");
+	buffer_idx = (int *) malloc(num_of_buffers * sizeof(int*));
 	bufferList = (int **) malloc(num_of_buffers * sizeof(int**));
-	//printf("More?\n");
+
+	int j;
 	for (j = 0; j < num_of_buffers;j++)
 	{
-		counts[j] = 0;
+		buffer_idx[j] = 0;
+
 		int k;
 		for (k = 0; k < N; k++)
 		{
@@ -82,7 +82,7 @@ int main(int argc, char const *argv[])
 	printf("Allocating Space\n");
 	#endif
 
-	// allocating space for semaphores and threads
+	// allocating space for semaphores/threads for all shared buffers
 	mutexes = (sem_t *) malloc(num_of_buffers * sizeof(sem_t*));  
 	empties = (sem_t*) malloc(num_of_buffers * sizeof(sem_t*));
 	fulls = (sem_t*) malloc(num_of_buffers * sizeof(sem_t*));
@@ -100,6 +100,7 @@ int main(int argc, char const *argv[])
 		sem_init(&empties[j],0,N);
 		sem_init(&fulls[j],0,0);
 	}
+	sem_init(&print_sem,0,1000);
 
 	#ifdef DEBUG
 	printf("Creating BufferPrinter Thread\n");
@@ -173,16 +174,17 @@ void producer(void *num) {
 		item = produce_item();
 		
 		int i;
-		int buffer_num = 0;
+		int buffer_num = 0; // will hold value of a not-full shared buffer
 		for (i = 0; i < num_of_buffers; i++)
 		{
-			if (counts[i] != N)
+			if (buffer_idx[i] != N) // if shared buffer is not full
 			{
 				buffer_num = i;
 				break;
 			}
 		}
 		
+		// grab semaphores of specified buffer
 		sem_t *mutex = (sem_t*)&mutexes[buffer_num];
 		sem_t *empty = (sem_t*)&empties[buffer_num];
 		sem_t *full = (sem_t*)&fulls[buffer_num];
@@ -198,7 +200,7 @@ void producer(void *num) {
 		// decrement number of items
 		num_of_items--;
 		
-		printf("%s Produced: %d\n",(char*) num,item);
+		//printf("%s Produced: %d\n",(char*) num,item);
 		sem_post(&mutex);
 		sem_post(&full);
 	}
@@ -210,7 +212,7 @@ int produce_item() {
 }
 
 void insert_item(int num, int item) {
-	bufferList[num][counts[num]++] = item;
+	bufferList[num][buffer_idx[num]++] = item;
 }
 
 // ----------------------------------------------------------------------------
@@ -231,7 +233,7 @@ void consumer(void * num) {
 		int buffer_num = 0;
 		for (i = 0; i < num_of_buffers; i++)
 		{
-			if (counts[i] != N)
+			if (buffer_idx[i] != N)
 			{
 				buffer_num = i;
 				break;
@@ -245,11 +247,11 @@ void consumer(void * num) {
 		
 		sem_wait(&full);
 		sem_wait(&mutex);
-		if (counts[buffer_num] != 0) {
+		//if (buffer_idx[buffer_num] != 0) {
 			item = remove_item(buffer_num);
 			consume_item(item);
-			printf("%s Consumed %d\n",(char*) num,item);
-		}
+			//printf("%s Consumed %d\n",(char*) num,item);
+		/}
 		sem_post(&mutex);
 		sem_post(&empty);
 	}
@@ -257,7 +259,7 @@ void consumer(void * num) {
 }
 
 int remove_item(num) {
-	return bufferList[num][--counts[num]];
+	return bufferList[num][--buffer_idx[num]];
 }
 
 void consume_item(int item) {
@@ -287,7 +289,7 @@ void bufferprinter()
 			printf("%d Items Created\n",maximum - num_of_items);
 			for (i = 0; i < num_of_buffers; i++)
 			{
-				printf("Buffer %d has %d items\n",i+1,counts[i]);
+				printf("Buffer %d has %d items\n",i+1,buffer_idx[i]);
 			}			
 			last = (maximum - num_of_items) / 1000;
 		}
@@ -296,6 +298,6 @@ void bufferprinter()
 	printf("%d Items Created\n",maximum);
 	for (i = 0; i < num_of_buffers; i++)
 	{
-		printf("Buffer %d has %d items\n",i+1,counts[i]);
+		printf("Buffer %d has %d items\n",i+1,buffer_idx[i]);
 	}			
 }
