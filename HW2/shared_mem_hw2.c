@@ -1,51 +1,76 @@
-/*
- Example showing SHARED MEMORY
+// ----------------------------------------------------------------------------------
+// SHARED MEMORY - solving the producer consumer problem
+//
+// Authors: Emily Le, Daniel, Max Wolotsky
+// ----------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
-
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+// prototypes
+void producer(char*);
+void consumer(char*);
+
+// global vairbles
 int var = 0;
+
+// --- PRODUCER -----------------------------------------------------------------------
+//  Will simply increment an integer value in the shared memory
+// ------------------------------------------------------------------------------------
+void producer(char* sh_mem)
+{
+    int i;
+    for (i = 0; i < 10000000000; i++)
+    {
+      sh_mem[0] += 1;
+      printf("In spawn, in parent: %d\n", sh_mem[0]);
+    }
+}
+
+// --- CONSUMER -----------------------------------------------------------------------
+//  Will simply decrement an integer in the shared memory
+// ------------------------------------------------------------------------------------
+void consumer(char* sh_mem)
+{
+    int i;
+    for (i = 0; i < 10000000000; i++)
+    {
+      sh_mem[0] -= 1;
+      printf ("In spawn, in child: %d\n", sh_mem[0]);
+    }    
+}
+
+// --- SPAWN --------------------------------------------------------------------------
+//  This method will call the fork() method to create 2 new processes. The parent 
+//  process will call the producer() function and the child process will call the
+//  the consumer() function. 
+// ------------------------------------------------------------------------------------
 int spawn(char* sh_mem)
 {
   pid_t child_pid; //16 bit value ID --> typecast to int(32 bits)
   sh_mem[0] = var;
   child_pid = fork();
   int i;
-  if(child_pid != 0){ //parent
 
-    for (i = 0; i < 10000000000; i++)
-    {
-      sh_mem[0] += 1;
-      printf("In spawn, in parent: %d\n", sh_mem[0]);
-    }
+  if(child_pid != 0) //parent
+  { 
+    producer(sh_mem);
     return child_pid;
   }
   else//child
   {
-    for (i = 0; i < 10000000000; i++)
-    {
-      sh_mem[0] -= 1;
-      printf ("In spawn, in child: %d\n", sh_mem[0]);
-    }    
-    //fprintf((stderr), "An error occured in execvp\n");
-    abort();
+    consumer(sh_mem);
+    //abort();
   }
   return;
 }
 
-// shared memory is being created and where a fork happens to create 2 processes.
+//---- MAIN -----------------------------------------------------------------------------
+//  THis is the main method that will create, allocate and destroy the shared memory
+// --------------------------------------------------------------------------------------
 int main()
 {
   int segment_id;    //ID to Shared Memory Segment
