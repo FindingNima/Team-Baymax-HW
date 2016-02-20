@@ -103,12 +103,15 @@ void producer(void* args)
 void consumer(void* args)
 {
 	
-	struct arg_struct *arguments = (struct arg_struct*) args;
+	struct arg_struct *arguments2 = (struct arg_struct*) args;
 	#if DEBUG
 	//printf("Enter Consumer %d\n",arguments -> thread_num);
 	#endif
 	//char* thread_name = &arguments -> thread_num;
-	int thread_num = arguments -> thread_num;
+	int thread_num = 2;
+	//sprintf(&thread_num,"%d",arguments2 -> thread_num);
+
+	printf("Lord Nima, please tell me what thread num is: %d\n",thread_num);
 	//printf("DID I SEGFAULT #</3\n");
 	//int* buffer_list = arguments -> buffer_list; // number in each buffer
 	//printf("DID I MOTHER FUCKING SEGFAULT?\n");
@@ -189,8 +192,8 @@ int main(int argc, char const *argv[])
 	//char *cons_num[num_of_consumers];
 
 	// allocate argument structures
-	struct arg_struct *prod_args = (struct arg_struct*) malloc(num_of_producers * sizeof(struct arg_struct*));
-	struct arg_struct *cons_args = (struct arg_struct*) malloc(num_of_consumers * sizeof(struct arg_struct*));
+	struct arg_struct *prod_args = (struct arg_struct*) malloc(num_of_producers * sizeof(struct arg_struct));
+	struct arg_struct *cons_args = (struct arg_struct*) malloc(num_of_consumers * sizeof(struct arg_struct));
 	
 	// create an array of buffers
 	buffer_list = (int*)malloc(num_of_buffers * sizeof(int*));
