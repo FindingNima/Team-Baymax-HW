@@ -10,7 +10,7 @@
 
 #define TRUE 1
 #define FALSE 0
-#define DEBUG 1
+#define DEBUG 0
 #define BUFFER_SIZE 1024
 
 // prototypes
@@ -38,7 +38,7 @@ pthread_t* cons_id;
 //
 // ---------------------------------------------------------------------------
 struct arg_struct {
-	char* thread_num;
+	int thread_num;
 	int* buffer_list;
 	sem_t* index_sem_list;
 };
@@ -49,7 +49,9 @@ struct arg_struct {
 void producer(void* args)
 {
 	struct arg_struct *arguments = (struct arg_struct*) args;
-	char* thread_name = arguments -> thread_num;
+	//char* thread_name = &arguments -> thread_num;
+	int thread_num = arguments -> thread_num;
+	char* tn = (char*) malloc(sizeof(char*) * 2);
 	int* buffer_list = arguments -> buffer_list;		// number in each buffer
 	sem_t* index_sem_list = arguments -> index_sem_list;			//
 
@@ -80,10 +82,12 @@ void producer(void* args)
 					total_produced++;
 					buffer_list[i]++;
 					sem_post(&index_sem_list[i]);
+					break;
 				}
 			}
 		}
 	}
+	printf("Thread %d Finished\n",thread_num);
 }
 
 // ------ CONSUMER -----------------------------------------------------------
@@ -92,7 +96,7 @@ void producer(void* args)
 void consumer(void* args)
 {
 	struct arg_struct *arguments = (struct arg_struct*) args;
-	char* thread_name = arguments -> thread_num;
+	int thread_num = arguments -> thread_num;
 	int* buffer_list = arguments -> buffer_list;
 	sem_t* index_sem_list = arguments -> index_sem_list;
 	
@@ -102,7 +106,7 @@ void consumer(void* args)
 //
 // ---------------------------------------------------------------------------
 void printBuffer(int total_produced, int* buffer_list)
-{
+{	
 	int i;
 	for(i = 0; i < num_of_buffers; i++) 
 	{
@@ -133,8 +137,8 @@ int main(int argc, char const *argv[])
 	// allocate threads
 	prod_id = (pthread_t*) malloc(num_of_producers * sizeof(pthread_t*));
 	cons_id = (pthread_t*) malloc(num_of_consumers * sizeof(pthread_t*));
-	char *prod_num[num_of_producers];
-	char *cons_num[num_of_consumers];
+	//char *prod_num[num_of_producers];
+	//char *cons_num[num_of_consumers];
 
 	// allocate argument structures
 	struct arg_struct *prod_args = (struct arg_struct*) malloc(num_of_producers * sizeof(struct arg_struct*));
@@ -160,8 +164,8 @@ int main(int argc, char const *argv[])
 	for (i = 0; i < num_of_producers; i++)
 	{
 		struct arg_struct args = prod_args[i];
-		sprintf(&prod_num[i],"%d",i);
-		args.thread_num = prod_num[i];
+		//sprintf(&prod_num[i],"%d",i);
+		args.thread_num = i;
 		args.buffer_list = buffers;
 		args.index_sem_list = buffer_index_sem;
 		#if DEBUG
@@ -176,8 +180,12 @@ int main(int argc, char const *argv[])
 	// Create consumer threads
 	for (i = 0; i < num_of_consumers; i++)
 	{
-		sprintf(&cons_num[i],"%d",i);
-		pthread_create(&cons_id[i],NULL,(void*)&consumer,&cons_num[i]);
+		struct arg_struct args = prod_args[i];
+		//sprintf(&cons_num[i],"%d",i);
+		args.thread_num = i;
+		args.buffer_list = buffers;
+		args.index_sem_list = buffer_index_sem;
+		pthread_create(&cons_id[i],NULL,(void*)&consumer,(void*)&args);
 	}
 
 	// Join threads
