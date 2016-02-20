@@ -102,16 +102,15 @@ void producer(void* args)
 // ---------------------------------------------------------------------------
 void consumer(void* args)
 {
-	
-	struct arg_struct *arguments2 = (struct arg_struct*) args;
+	char* thread_num = (char*) args;	
+	//struct arg_struct *arguments2 = (struct arg_struct*) args;
 	#if DEBUG
 	//printf("Enter Consumer %d\n",arguments -> thread_num);
 	#endif
 	//char* thread_name = &arguments -> thread_num;
-	int thread_num = 2;
+	//int thread_num = 2;
 	//sprintf(&thread_num,"%d",arguments2 -> thread_num);
 
-	printf("Lord Nima, please tell me what thread num is: %d\n",thread_num);
 	//printf("DID I SEGFAULT #</3\n");
 	//int* buffer_list = arguments -> buffer_list; // number in each buffer
 	//printf("DID I MOTHER FUCKING SEGFAULT?\n");
@@ -150,7 +149,7 @@ void consumer(void* args)
 
 		}
 	}
-	printf("Consumer Thread %d Finished\n",thread_num);
+	printf("Consumer Thread %s Finished\n",thread_num);
 }
 
 // ------ PRINT BUFFER -------------------------------------------------------
@@ -189,7 +188,7 @@ int main(int argc, char const *argv[])
 	prod_id = (pthread_t*) malloc(num_of_producers * sizeof(pthread_t*));
 	cons_id = (pthread_t*) malloc(num_of_consumers * sizeof(pthread_t*));
 	//char *prod_num[num_of_producers];
-	//char *cons_num[num_of_consumers];
+	char *cons_num[num_of_consumers];
 
 	// allocate argument structures
 	struct arg_struct *prod_args = (struct arg_struct*) malloc(num_of_producers * sizeof(struct arg_struct));
@@ -231,12 +230,13 @@ int main(int argc, char const *argv[])
 	// Create consumer threads
 	for (i = 0; i < num_of_consumers; i++)
 	{
-		struct arg_struct *args = &cons_args[i];
-		//sprintf(&cons_num[i],"%d",i);
-		args -> thread_num = i;
+		//struct arg_struct *args = &cons_args[i];
+		sprintf(&cons_num[i],"%d",i);
+		//args -> thread_num = i;
 		//args -> buffer_list = buffers;
 		//args -> index_sem_list = buffer_index_sem;
-		pthread_create(&cons_id[i],NULL,(void*)&consumer,(void*)&args);
+		//int* passi = &i;
+		pthread_create(&cons_id[i],NULL,(void*)&consumer,(void*)&cons_num[i]);
 	}
 
 	// Join threads
