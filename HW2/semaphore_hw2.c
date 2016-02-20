@@ -52,7 +52,7 @@ void producer(void* args)
 	struct arg_struct *arguments = (struct arg_struct*) args;
 	#if DEBUG
 	printf("Enter Producer %d\n",arguments -> thread_num);
-#endif
+	#endif
 	//char* thread_name = &arguments -> thread_num;
 	int thread_num = arguments -> thread_num;
 	int* buffer_list = arguments -> buffer_list;		// number in each buffer
@@ -81,13 +81,13 @@ void producer(void* args)
 			{
 				if((buffer_list[i] < BUFFER_SIZE) && sem_trywait(&index_sem_list[i]) == 0)
 				{
-					sem_post(&buffer_sem);
 					total_produced++;
 					buffer_list[i]++;
 					sem_post(&index_sem_list[i]);
 					break;
 				}
 			}
+			sem_post(&buffer_sem);
 		}
 	}
 	printf("Thread %d Finished\n",thread_num);
@@ -114,13 +114,15 @@ void consumer(void* args)
 			{
 				if((buffer_list[i] > 0) && sem_trywait(&index_sem_list[i]) == 0)
 				{
-					sem_post(&buffer_sem);
 					total_consumed++;
 					buffer_list[i]--;
 					sem_post(&index_sem_list[i]);
 					break;
 				}
 			}
+			sem_post(&buffer_sem);
+
+
 		}
 	}
 	printf("Consumer Thread %d Finished\n",thread_num);
