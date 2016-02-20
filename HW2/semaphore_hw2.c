@@ -17,6 +17,12 @@ void producer(void*);
 void consumer(void*);
 void printBuffer();
 
+// global variables
+int num_of_producers;
+int num_of_consumers;
+int num_of_buffers;
+int	num_of_items;
+
 // ------ PRODUCER -----------------------------------------------------------
 //
 // ---------------------------------------------------------------------------

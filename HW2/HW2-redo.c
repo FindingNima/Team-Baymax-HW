@@ -79,6 +79,13 @@ void producer(void* prod_num)
 					shared_buffers[i]++;
 					total_produced++;
 					sem_wait(&when_to_print);
+
+							#ifdef DEBUG
+			int whenToPrint;
+			sem_getvalue(&when_to_print, &whenToPrint);
+			printf("When to print: %d\n", whenToPrint);
+			#endif
+
 					sem_post(&items_to_be_consumed);
 
 					#ifdef DEBUG
@@ -107,60 +114,60 @@ void producer(void* prod_num)
 // ----------------------------------------------------------------------------
 void consumer(void* cons_num)
 {
-	#ifdef DEBUG
-	printf("consumer is working\n");
-	#endif
+	// #ifdef DEBUG
+	// printf("consumer is working\n");
+	// #endif
 	
-	int itemsToBeConsumed;
+	// int itemsToBeConsumed;
 
-	while (TRUE)
-	{
-		sem_getvalue(&items_to_be_consumed, &itemsToBeConsumed);
-		if (itemsToBeConsumed == 0) {
-			printf("Consumer thread %d is yielding\n", (int)cons_num);
-		}
+	// while (TRUE)
+	// {
+	// 	sem_getvalue(&items_to_be_consumed, &itemsToBeConsumed);
+	// 	if (itemsToBeConsumed == 0) {
+	// 		printf("Consumer thread %d is yielding\n", (int)cons_num);
+	// 	}
 
-		int mutexVal;
-		sem_getvalue(&mutex, &mutexVal);
-		printf("Mutex in consumer: %d\n", mutexVal);
+	// 	int mutexVal;
+	// 	sem_getvalue(&mutex, &mutexVal);
+	// 	printf("Mutex in consumer: %d\n", mutexVal);
 
-		sem_wait(&items_to_be_consumed);
-		if (sem_trywait(&mutex) == 0) {
+	// 	sem_wait(&items_to_be_consumed);
+	// 	if (sem_trywait(&mutex) == 0) {
 
-			#ifdef DEBUG
-			int mutexVal;
-			sem_getvalue(&mutex, &mutexVal);
-			printf("Mutex: %d\n", mutexVal);
-			#endif
+	// 		#ifdef DEBUG
+	// 		int mutexVal;
+	// 		sem_getvalue(&mutex, &mutexVal);
+	// 		printf("Mutex: %d\n", mutexVal);
+	// 		#endif
 
-			int i;
-			for (i = num_of_buffers - 1; i >= 0; i--)
-			{
-				if (shared_buffers[i] > 0)
-				{
-					shared_buffers[i]--;
+	// 		int i;
+	// 		for (i = num_of_buffers - 1; i >= 0; i--)
+	// 		{
+	// 			if (shared_buffers[i] > 0)
+	// 			{
+	// 				shared_buffers[i]--;
 
-					#ifdef DEBUG
-					printf("Removed from buffer %d\n", i);
-					#endif
+	// 				#ifdef DEBUG
+	// 				printf("Removed from buffer %d\n", i);
+	// 				#endif
 
-					break;
-				}
-			}
+	// 				break;
+	// 			}
+	// 		}
 
-			sem_post(&mutex);
+	// 		sem_post(&mutex);
 
-		} else {
-			sem_post(&items_to_be_consumed);
-		}
+	// 	} else {
+	// 		sem_post(&items_to_be_consumed);
+	// 	}
 		
 
-		if (total_produced == num_of_items && itemsToBeConsumed == 0) 
-		{
-			printf("Consumer Thread %d is finished\n", (int)cons_num);
-			break;
-		}
-	}
+	// 	if (total_produced == num_of_items && itemsToBeConsumed == 0) 
+	// 	{
+	// 		printf("Consumer Thread %d is finished\n", (int)cons_num);
+	// 		break;
+	// 	}
+	// }
 
 	//printf("Broke out of while");
 
@@ -203,12 +210,13 @@ void bufferPrinter()
 			}
 			sem_post(&locking_magic);
 
-			#ifdef DEBUG
-			int whenToPrint;
-			sem_getvalue(&when_to_print, &whenToPrint);
-			printf("When to print: %d\n", whenToPrint);
-			#endif
+			// #ifdef DEBUG
+			// int whenToPrint;
+			// sem_getvalue(&when_to_print, &whenToPrint);
+			// printf("When to print: %d\n", whenToPrint);
+			// #endif
 		}
+
 	}
 
 }
