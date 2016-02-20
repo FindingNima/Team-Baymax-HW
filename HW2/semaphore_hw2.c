@@ -24,6 +24,8 @@ int num_of_consumers;
 int num_of_buffers;
 int	num_of_items;
 
+int total_produced = 0;
+
 // global semaphores
 sem_t buffer_sem;
 
@@ -38,8 +40,9 @@ pthread_t* cons_id;
 struct arg_struct {
 	char* thread_num;
 	int* buffer_list;
-	sem_t* sem_list;
+	sem_t* index_sem_list;
 };
+
 // ------ PRODUCER -----------------------------------------------------------
 //
 // ---------------------------------------------------------------------------
@@ -47,8 +50,9 @@ void producer(void* args)
 {
 	struct arg_struct *arguments = (struct arg_struct*) args;
 	char* thread_name = arguments -> thread_num;
-	int* buffer_list = arguments -> buffer_list;
-	sem_t* sem_list = arguments -> sem_list;
+	int* buffer_list = arguments -> buffer_list;		// number in each buffer
+	sem_t* index_sem_list = arguments -> index_sem_list;			//
+
 	#if DEBUG
 		printf("Begin Struct Dump in Producer\n");
 		printf("Thread Name = %s\n", &thread_name);
@@ -56,7 +60,30 @@ void producer(void* args)
 		printf("End Struct Dump in Producer\n");
 	#endif
 
+	while(total_produced < num_of_items)
+	{
+		// spin lock bitch
+		if (sem_trywait(&buffer_sem) == 0) {
+		{
+			// check for 1000 produced
+			if (total_produced != 0 && total_produced % 1000 = 0 )
+			{	
+				bufferPrinter(total_produced, buffer_list);
+			}
 
+			int i;
+			for(i = 0; i < num_of_buffers; i++)
+			{
+				if((buffer_list[i] < BUFFER_SIZE) && sem_trywait(&index_sem_list[i]) == 0))
+				{
+					sem_post(&buffer_sem);
+					total_produced++;
+					buffer_list[i]++;
+					sem_post(&index_sem_list[i]);
+				}
+			}
+		}
+	}
 }
 
 // ------ CONSUMER -----------------------------------------------------------
@@ -67,16 +94,22 @@ void consumer(void* args)
 	struct arg_struct *arguments = (struct arg_struct*) args;
 	char* thread_name = arguments -> thread_num;
 	int* buffer_list = arguments -> buffer_list;
-	sem_t* sem_list = arguments -> sem_list;
+	sem_t* index_sem_list = arguments -> index_sem_list;
 	
 }
 
 // ------ PRINT BUFFER -------------------------------------------------------
 //
 // ---------------------------------------------------------------------------
-void printBuffer()
+void printBuffer(int total_produced, int* buffer_list)
 {
-	
+	int i;
+	for(i = 0; i < num_of_buffers; i++) 
+	{
+		printf("SharedBuffer %d has %d of items\n", i, buffer_list[i]);
+	}
+
+	printf("%d items created\n", total_produced);
 }
 
 
@@ -130,7 +163,7 @@ int main(int argc, char const *argv[])
 		sprintf(&prod_num[i],"%d",i);
 		args.thread_num = prod_num[i];
 		args.buffer_list = buffers;
-		args.sem_list = buffer_index_sem;
+		args.index_sem_list = buffer_index_sem;
 		#if DEBUG
 			printf("Entering Main Debugger 1\n");
 			printf("Thread Number = %s\n",&prod_num[i]);
