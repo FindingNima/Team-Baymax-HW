@@ -49,9 +49,9 @@ struct arg_struct {
 void producer(void* args)
 {
 	struct arg_struct *arguments = (struct arg_struct*) args;
+	printf("Enter Producer %d\n",arguments -> thread_num);
 	//char* thread_name = &arguments -> thread_num;
 	int thread_num = arguments -> thread_num;
-	char* tn = (char*) malloc(sizeof(char*) * 2);
 	int* buffer_list = arguments -> buffer_list;		// number in each buffer
 	sem_t* index_sem_list = arguments -> index_sem_list;			//
 
@@ -163,18 +163,18 @@ int main(int argc, char const *argv[])
 	//Create producer threads
 	for (i = 0; i < num_of_producers; i++)
 	{
-		struct arg_struct args = prod_args[i];
+		struct arg_struct *args = &prod_args[i];
 		//sprintf(&prod_num[i],"%d",i);
-		args.thread_num = i;
-		args.buffer_list = buffers;
-		args.index_sem_list = buffer_index_sem;
+		args -> thread_num = i;
+		args -> buffer_list = buffers;
+		args -> index_sem_list = buffer_index_sem;
 		#if DEBUG
 			printf("Entering Main Debugger 1\n");
 			printf("Thread Number = %s\n",&prod_num[i]);
 			printf("Buffer at 0 = %d\n",args.buffer_list[0]);
 			printf("Exiting Main Debugger 1\n");
 		#endif
-		pthread_create(&prod_id[i],NULL,(void*)&producer,(void*)&args);
+		pthread_create(&prod_id[i],NULL,(void*)&producer,(void*)args);
 	}
 	
 	// Create consumer threads
@@ -208,8 +208,8 @@ int main(int argc, char const *argv[])
 	// Deallocate Stuff
 	free(prod_id);
 	free(cons_id);
-	free(prod_args);
-	free(cons_args);
+	//free(prod_args);
+	//free(cons_args);
 
 
 
