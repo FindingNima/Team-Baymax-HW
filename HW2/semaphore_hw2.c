@@ -27,19 +27,35 @@ int	num_of_items;
 // global semaphores
 sem_t buffer_sem;
 
+// ------ STRUCTURE ----------------------------------------------------------
+//
+// ---------------------------------------------------------------------------
+struct args_struct {
+	char* thread_num;
+	int* buffer_list;
+	sem_t sem_list;
+};
 // ------ PRODUCER -----------------------------------------------------------
 //
 // ---------------------------------------------------------------------------
-void producer(void* prod_num, int* buffers)
+void producer(void* args)
 {
+	struct arg_struct *arguments = (struct arg_struct*) args;
+	char* thread_name = arguments -> thread_num;
+	int* buffer_list = arguments -> buffer_list;
+	sem_t* sem_list = arguments -> sem_list;
 
 }
 
 // ------ CONSUMER -----------------------------------------------------------
 //
 // ---------------------------------------------------------------------------
-void consumer(void* cons_num, int* buffers)
+void consumer(void* args)
 {
+	struct arg_struct *arguments = (struct arg_struct*) args;
+	char* thread_name = arguments -> thread_num;
+	int* buffer_list = arguments -> buffer_list;
+	sem_t* sem_list = arguments -> sem_list;
 	
 }
 
@@ -72,6 +88,10 @@ int main(int argc, char const *argv[])
 	char *prod_num[num_of_producers];
 	char *cons_num[num_of_consumers];
 
+	// allocate argument structures
+	struct *prod_args = (struct*) malloc(num_of_producers * sizeof(struct*));
+	struct *cons_args = (struct*) malloc(num_of_consumers * sizeof(struct*));
+	
 	// create an array of buffers
 	int buffers[num_of_buffers];
 	sem_t buffer_index_sem[num_of_buffers];
@@ -91,8 +111,12 @@ int main(int argc, char const *argv[])
 	//Create producer threads
 	for (i = 0; i < num_of_producers; i++)
 	{
+		struct *args = *prod_args[i];
 		sprintf(&prod_num[i],"%d",i);
-		pthread_create(&prod_id[i],NULL,(void*)&producer,&prod_num[i]);
+		args.thread_num = prod_num[i];
+		args.buffer_list = buffers[i];
+		args.sem_list = buffer_index_sem[i];
+		pthread_create(&prod_id[i],NULL,(void*)&producer,(void*)&args);
 	}
 	
 	//Create consumer threads
