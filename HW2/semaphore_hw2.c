@@ -27,13 +27,18 @@ int	num_of_items;
 // global semaphores
 sem_t buffer_sem;
 
+//global threads
+pthread_t* prod_id;
+pthread_t* cons_id;
+
+
 // ------ STRUCTURE ----------------------------------------------------------
 //
 // ---------------------------------------------------------------------------
-struct args_struct {
+struct arg_struct {
 	char* thread_num;
 	int* buffer_list;
-	sem_t sem_list;
+	sem_t* sem_list;
 };
 // ------ PRODUCER -----------------------------------------------------------
 //
@@ -74,7 +79,10 @@ void printBuffer()
 int main(int argc, char const *argv[])
 {
 	if (argc < 5 || argc > 5)  
+	{
+		printf("YOU HAVE FAILED LORD NIMA\n");
 		return 1;
+	}
 
 	// intializing the 4 arguments passed in from the shell
 	num_of_producers = atoi(argv[1]);
@@ -89,8 +97,8 @@ int main(int argc, char const *argv[])
 	char *cons_num[num_of_consumers];
 
 	// allocate argument structures
-	struct *prod_args = (struct*) malloc(num_of_producers * sizeof(struct*));
-	struct *cons_args = (struct*) malloc(num_of_consumers * sizeof(struct*));
+	struct arg_struct *prod_args = (struct arg_struct*) malloc(num_of_producers * sizeof(struct arg_struct*));
+	struct arg_struct *cons_args = (struct arg_struct*) malloc(num_of_consumers * sizeof(struct arg_struct*));
 	
 	// create an array of buffers
 	int buffers[num_of_buffers];
@@ -102,7 +110,7 @@ int main(int argc, char const *argv[])
 		buffers[i] = 0;
 
 		// initializing semaphores
-		sem_int(&buffer_index_sem[i], 0 , 1);
+		sem_init(&buffer_index_sem[i], 0 , 1);
 	}
 
 	// whole buffer list
@@ -111,20 +119,45 @@ int main(int argc, char const *argv[])
 	//Create producer threads
 	for (i = 0; i < num_of_producers; i++)
 	{
-		struct *args = *prod_args[i];
+		struct arg_struct args = prod_args[i];
 		sprintf(&prod_num[i],"%d",i);
 		args.thread_num = prod_num[i];
-		args.buffer_list = buffers[i];
-		args.sem_list = buffer_index_sem[i];
+		args.buffer_list = buffers;
+		args.sem_list = buffer_index_sem;
 		pthread_create(&prod_id[i],NULL,(void*)&producer,(void*)&args);
 	}
 	
-	//Create consumer threads
+	// Create consumer threads
 	for (i = 0; i < num_of_consumers; i++)
 	{
 		sprintf(&cons_num[i],"%d",i);
 		pthread_create(&cons_id[i],NULL,(void*)&consumer,&cons_num[i]);
 	}
+
+	// Join threads
+	for (i = 0; i < num_of_producers; i++)
+	{
+		pthread_join(prod_id[i],NULL);
+	}
+	for (i = 0; i < num_of_consumers; i++)
+	{
+		pthread_join(cons_id[i],NULL);
+	}
+
+	// Destroy Semaphores
+	sem_destroy(&buffer_sem);
+	for (i = 0; i < num_of_buffers; i++)
+	{
+		sem_destroy(&buffer_index_sem[i]);
+	}
+
+	// Deallocate Stuff
+	free(prod_id);
+	free(cons_id);
+	free(prod_args);
+	free(cons_args);
+
+
 
 
 	return 0;
