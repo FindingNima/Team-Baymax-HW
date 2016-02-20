@@ -63,18 +63,18 @@ void producer(void* args)
 	while(total_produced < num_of_items)
 	{
 		// spin lock bitch
-		if (sem_trywait(&buffer_sem) == 0) {
+		if (sem_trywait(&buffer_sem) == 0) 
 		{
 			// check for 1000 produced
-			if (total_produced != 0 && total_produced % 1000 = 0 )
+			if (total_produced != 0 && total_produced % 1000 == 0 )
 			{	
-				bufferPrinter(total_produced, buffer_list);
+				printBuffer(total_produced, buffer_list);
 			}
 
 			int i;
 			for(i = 0; i < num_of_buffers; i++)
 			{
-				if((buffer_list[i] < BUFFER_SIZE) && sem_trywait(&index_sem_list[i]) == 0))
+				if((buffer_list[i] < BUFFER_SIZE) && sem_trywait(&index_sem_list[i]) == 0)
 				{
 					sem_post(&buffer_sem);
 					total_produced++;
