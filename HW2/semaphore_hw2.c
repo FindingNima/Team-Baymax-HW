@@ -25,6 +25,7 @@ int num_of_buffers;
 int	num_of_items;
 
 int total_produced = 0;
+int total_consumed = 0;
 
 // global semaphores
 sem_t buffer_sem;
@@ -49,7 +50,9 @@ struct arg_struct {
 void producer(void* args)
 {
 	struct arg_struct *arguments = (struct arg_struct*) args;
+	#if DEBUG
 	printf("Enter Producer %d\n",arguments -> thread_num);
+#endif
 	//char* thread_name = &arguments -> thread_num;
 	int thread_num = arguments -> thread_num;
 	int* buffer_list = arguments -> buffer_list;		// number in each buffer
@@ -100,6 +103,27 @@ void consumer(void* args)
 	int* buffer_list = arguments -> buffer_list;
 	sem_t* index_sem_list = arguments -> index_sem_list;
 	
+	while(total_consumed < num_of_items)
+	{
+		// spin lock bitch
+		if (sem_trywait(&buffer_sem) == 0) 
+		{
+
+			int i;
+			for(i = 0; i < num_of_buffers; i++)
+			{
+				if((buffer_list[i] > 0) && sem_trywait(&index_sem_list[i]) == 0)
+				{
+					sem_post(&buffer_sem);
+					total_consumed++;
+					buffer_list[i]--;
+					sem_post(&index_sem_list[i]);
+					break;
+				}
+			}
+		}
+	}
+	printf("Consumer Thread %d Finished\n",thread_num);
 }
 
 // ------ PRINT BUFFER -------------------------------------------------------
