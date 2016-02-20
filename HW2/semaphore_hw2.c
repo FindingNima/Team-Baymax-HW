@@ -22,7 +22,11 @@ void printBuffer();
 int num_of_producers;
 int num_of_consumers;
 int num_of_buffers;
-int	num_of_items;
+int num_of_items;
+
+//Global Buffer List
+int* buffer_list;
+sem_t* index_sem_list;
 
 int total_produced = 0;
 int total_consumed = 0;
@@ -40,8 +44,8 @@ pthread_t* cons_id;
 // ---------------------------------------------------------------------------
 struct arg_struct {
 	int thread_num;
-	int* buffer_list;
-	sem_t* index_sem_list;
+	//int* buffer_list;
+	//sem_t* index_sem_list;
 };
 
 // ------ PRODUCER -----------------------------------------------------------
@@ -55,12 +59,12 @@ void producer(void* args)
 	#endif
 	//char* thread_name = &arguments -> thread_num;
 	int thread_num = arguments -> thread_num;
-	int* buffer_list = arguments -> buffer_list;		// number in each buffer
-	sem_t* index_sem_list = arguments -> index_sem_list;			//
+	//int* buffer_list = arguments -> buffer_list;		// number in each buffer
+	//sem_t* index_sem_list = arguments -> index_sem_list;			//
 
 	#if DEBUG
 		printf("Begin Struct Dump in Producer\n");
-		printf("Thread Name = %s\n", &thread_name);
+		printf("Thread Name = %d\n", thread_num);
 		printf("Buffer at 0 = %d\n", buffer_list[0]);
 		printf("End Struct Dump in Producer\n");
 	#endif
@@ -98,22 +102,40 @@ void producer(void* args)
 // ---------------------------------------------------------------------------
 void consumer(void* args)
 {
-	struct arg_struct *arguments = (struct arg_struct*) args;
-	int thread_num = arguments -> thread_num;
-	int* buffer_list = arguments -> buffer_list;
-	sem_t* index_sem_list = arguments -> index_sem_list;
 	
+	struct arg_struct *arguments = (struct arg_struct*) args;
+	#if DEBUG
+	//printf("Enter Consumer %d\n",arguments -> thread_num);
+	#endif
+	//char* thread_name = &arguments -> thread_num;
+	int thread_num = arguments -> thread_num;
+	//printf("DID I SEGFAULT #</3\n");
+	//int* buffer_list = arguments -> buffer_list; // number in each buffer
+	//printf("DID I MOTHER FUCKING SEGFAULT?\n");
+	//sem_t* index_sem_list = arguments -> index_sem_list;
+	#if DEBUG
+	printf("DID I SEGFAULT? #<3\n");
+	#endif
 	while(total_consumed < num_of_items)
 	{
 		// spin lock bitch
 		if (sem_trywait(&buffer_sem) == 0) 
 		{
-
+		#if DEBUG
+		printf("I GOT A SEMAPHORE!!!\n");	
+		#endif
 			int i;
 			for(i = 0; i < num_of_buffers; i++)
 			{
+				#if DEBUG
+				printf("ENTERED FOR LOOP\n");
+				printf("BUFFER LIST: %d\n",buffer_list[i]);
+				#endif
 				if((buffer_list[i] > 0) && sem_trywait(&index_sem_list[i]) == 0)
 				{
+				#if DEBUG
+				printf("ENTERED IF STATEMENT\n");
+				#endif
 					total_consumed++;
 					buffer_list[i]--;
 					sem_post(&index_sem_list[i]);
@@ -171,16 +193,17 @@ int main(int argc, char const *argv[])
 	struct arg_struct *cons_args = (struct arg_struct*) malloc(num_of_consumers * sizeof(struct arg_struct*));
 	
 	// create an array of buffers
-	int buffers[num_of_buffers];
-	sem_t buffer_index_sem[num_of_buffers];
+	buffer_list = (int*)malloc(num_of_buffers * sizeof(int*));
+	index_sem_list = (sem_t*)malloc(num_of_buffers * sizeof(sem_t)); 
+	//sem_t buffer_index_sem[num_of_buffers];
 
 	int i;
 	for (i = 0; i < num_of_buffers; i++)
 	{
-		buffers[i] = 0;
+		buffer_list[i] = 0;
 
 		// initializing semaphores
-		sem_init(&buffer_index_sem[i], 0 , 1);
+		sem_init(&index_sem_list[i], 0 , 1);
 	}
 
 	// whole buffer list
@@ -192,25 +215,24 @@ int main(int argc, char const *argv[])
 		struct arg_struct *args = &prod_args[i];
 		//sprintf(&prod_num[i],"%d",i);
 		args -> thread_num = i;
-		args -> buffer_list = buffers;
-		args -> index_sem_list = buffer_index_sem;
+		//args -> buffer_list = buffers;
+		//args -> index_sem_list = buffer_index_sem;
 		#if DEBUG
 			printf("Entering Main Debugger 1\n");
-			printf("Thread Number = %s\n",&prod_num[i]);
-			printf("Buffer at 0 = %d\n",args.buffer_list[0]);
+			printf("Thread Number = %d\n",i);
+			//printf("Buffer at 0 = %d\n",args -> buffer_list[0]);
 			printf("Exiting Main Debugger 1\n");
 		#endif
 		pthread_create(&prod_id[i],NULL,(void*)&producer,(void*)args);
 	}
-	
 	// Create consumer threads
 	for (i = 0; i < num_of_consumers; i++)
 	{
-		struct arg_struct args = prod_args[i];
+		struct arg_struct *args = &cons_args[i];
 		//sprintf(&cons_num[i],"%d",i);
-		args.thread_num = i;
-		args.buffer_list = buffers;
-		args.index_sem_list = buffer_index_sem;
+		args -> thread_num = i;
+		//args -> buffer_list = buffers;
+		//args -> index_sem_list = buffer_index_sem;
 		pthread_create(&cons_id[i],NULL,(void*)&consumer,(void*)&args);
 	}
 
@@ -223,14 +245,12 @@ int main(int argc, char const *argv[])
 	{
 		pthread_join(cons_id[i],NULL);
 	}
-
 	// Destroy Semaphores
 	sem_destroy(&buffer_sem);
 	for (i = 0; i < num_of_buffers; i++)
 	{
-		sem_destroy(&buffer_index_sem[i]);
+		sem_destroy(&index_sem_list[i]);
 	}
-
 	// Deallocate Stuff
 	free(prod_id);
 	free(cons_id);
