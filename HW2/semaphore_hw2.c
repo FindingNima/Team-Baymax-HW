@@ -10,7 +10,7 @@
 
 #define TRUE 1
 #define FALSE 0
-#define DEBUG 0
+#define DEBUG 1
 #define BUFFER_SIZE 1024
 
 // prototypes
@@ -49,6 +49,13 @@ void producer(void* args)
 	char* thread_name = arguments -> thread_num;
 	int* buffer_list = arguments -> buffer_list;
 	sem_t* sem_list = arguments -> sem_list;
+	#if DEBUG
+		printf("Begin Struct Dump in Producer\n");
+		printf("Thread Name = %s\n", &thread_name);
+		printf("Buffer at 0 = %d\n", buffer_list[0]);
+		printf("End Struct Dump in Producer\n");
+	#endif
+
 
 }
 
@@ -124,6 +131,12 @@ int main(int argc, char const *argv[])
 		args.thread_num = prod_num[i];
 		args.buffer_list = buffers;
 		args.sem_list = buffer_index_sem;
+		#if DEBUG
+			printf("Entering Main Debugger 1\n");
+			printf("Thread Number = %s\n",&prod_num[i]);
+			printf("Buffer at 0 = %d\n",args.buffer_list[0]);
+			printf("Exiting Main Debugger 1\n");
+		#endif
 		pthread_create(&prod_id[i],NULL,(void*)&producer,(void*)&args);
 	}
 	
