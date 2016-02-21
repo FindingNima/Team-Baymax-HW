@@ -1,6 +1,7 @@
 // ----------------------------------------------------------------------------
-// Semaphore - Producer / Consumer Problem
+// Mutex - Producer / Consumer Problem
 // ----------------------------------------------------------------------------
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -9,7 +10,7 @@
 
 #define TRUE 1
 #define FALSE 0
-#define DEBUG 0
+#define DEBUG 1
 #define BUFFER_SIZE 1024
 
 // prototypes
@@ -25,13 +26,15 @@ int num_of_items;
 
 //Global Buffer List
 int* buffer_list;
-sem_t* index_sem_list;
+pthread_mutex_t* index_mutex_list;
+pthread_cond_t* index_cond_list;
 
 int total_produced = 0;
 int total_consumed = 0;
 
 // global semaphores
-sem_t buffer_sem;
+pthread_mutex_t buffer_mutex;
+pthread_cond_t buffer_cond;
 
 //global threads
 pthread_t* prod_id;
@@ -71,7 +74,7 @@ void producer(void* args)
 	while(total_produced < num_of_items)
 	{
 		// spin lock bitch
-		if (sem_trywait(&buffer_sem) == 0) 
+		if (pthread_mutex_trylock(&buffer_mutex) == 0) 
 		{
 			// check for 1000 produced
 			if (total_produced != 0 && total_produced % 1000 == 0 )
@@ -82,11 +85,13 @@ void producer(void* args)
 			int i;
 			for(i = 0; i < num_of_buffers; i++)
 			{
-				if((buffer_list[i] < BUFFER_SIZE) && sem_trywait(&index_sem_list[i]) == 0)
+				if((buffer_list[i] < BUFFER_SIZE) && pthread_mutex_trylock(&index_mutex_list[i]) == 0)
 				{
 					total_produced++;
+					if (buffer_list[i] == 0)
+						pthread_cond_signal(&index_cond_list[i]);
 					buffer_list[i]++;
-					sem_post(&index_sem_list[i]);
+					pthread_mutex_unlock(&index_mutex_list[i]);
 					break;
 				}
 				if (i == num_of_buffers - 1)
@@ -95,7 +100,8 @@ void producer(void* args)
 					pthread_yield();
 				}
 			}
-			sem_post(&buffer_sem);
+			pthread_cond_signal(&buffer_cond);
+			pthread_mutex_unlock(&buffer_mutex);
 		}
 	}
 	printf("Thread %d Finished\n",thread_num);
@@ -125,7 +131,7 @@ void consumer(void* args)
 	while(total_consumed < num_of_items)
 	{
 		// spin lock bitch
-		if (sem_trywait(&buffer_sem) == 0) 
+		if (pthread_mutex_trylock(&buffer_mutex) == 0) 
 		{
 		#if DEBUG
 		printf("I GOT A SEMAPHORE!!!\n");	
@@ -137,14 +143,16 @@ void consumer(void* args)
 				printf("ENTERED FOR LOOP\n");
 				printf("BUFFER LIST: %d\n",buffer_list[i]);
 				#endif
-				if((buffer_list[i] > 0) && sem_trywait(&index_sem_list[i]) == 0)
+				if((buffer_list[i] > 0) && pthread_mutex_trylock(&index_mutex_list[i]) == 0)
 				{
 				#if DEBUG
 				printf("ENTERED IF STATEMENT\n");
 				#endif
 					total_consumed++;
+					if (buffer_list[i] == BUFFER_SIZE)
+						pthread_cond_signal(&index_cond_list[i]);
 					buffer_list[i]--;
-					sem_post(&index_sem_list[i]);
+					pthread_mutex_unlock(&index_mutex_list[i]);
 					break;
 				}
 				if (i == num_of_buffers - 1) 
@@ -153,7 +161,8 @@ void consumer(void* args)
 					pthread_yield();
 				}
 			}
-			sem_post(&buffer_sem);
+			pthread_cond_signal(&buffer_cond);
+			pthread_mutex_unlock(&buffer_mutex);
 
 
 		}
@@ -205,7 +214,7 @@ int main(int argc, char const *argv[])
 	
 	// create an array of buffers
 	buffer_list = (int*)malloc(num_of_buffers * sizeof(int*));
-	index_sem_list = (sem_t*)malloc(num_of_buffers * sizeof(sem_t)); 
+	//index_mutex_list = (sem_t*)malloc(num_of_buffers * sizeof(sem_t)); 
 	//sem_t buffer_index_sem[num_of_buffers];
 
 	int i;
@@ -214,11 +223,12 @@ int main(int argc, char const *argv[])
 		buffer_list[i] = 0;
 
 		// initializing semaphores
-		sem_init(&index_sem_list[i], 0 , 1);
+		//pthread_mutex_init(&index_mutex_list[i],NULL);
 	}
 
 	// whole buffer list
-	sem_init(&buffer_sem, 0, 1);
+	pthread_mutex_init(&buffer_mutex, NULL);
+	pthread_cond_init(&buffer_cond, NULL);
 
 	//Create producer threads
 	for (i = 0; i < num_of_producers; i++)
@@ -258,10 +268,10 @@ int main(int argc, char const *argv[])
 		pthread_join(cons_id[i],NULL);
 	}
 	// Destroy Semaphores
-	sem_destroy(&buffer_sem);
+	pthread_mutex_destroy(&buffer_mutex);
 	for (i = 0; i < num_of_buffers; i++)
 	{
-		sem_destroy(&index_sem_list[i]);
+		pthread_mutex_destroy(&index_mutex_list[i]);
 	}
 	// Deallocate Stuff
 	free(prod_id);
