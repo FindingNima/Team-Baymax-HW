@@ -10,7 +10,7 @@
 
 #define TRUE 1
 #define FALSE 0
-#define DEBUG 1
+#define DEBUG 0
 #define BUFFER_SIZE 1024
 
 // prototypes
@@ -76,20 +76,35 @@ void producer(void* args)
 		// spin lock bitch
 		if (pthread_mutex_trylock(&buffer_mutex) == 0) 
 		{
+			#if DEBUG
+			printf("Nima Says No #1\n");
+			#endif
 			// check for 1000 produced
 			if (total_produced != 0 && total_produced % 1000 == 0 )
-			{	
+			{
+				#if DEBUG
+				printf("Nima Says No #2\n");
+				#endif
 				printBuffer(total_produced, buffer_list);
 			}
 
 			int i;
 			for(i = 0; i < num_of_buffers; i++)
 			{
+				#if DEBUG
+				printf("Nima Says No #3\n");
+				#endif
 				if((buffer_list[i] < BUFFER_SIZE) && pthread_mutex_trylock(&index_mutex_list[i]) == 0)
 				{
 					total_produced++;
+					#if DEBUG
+					printf("Nima Says No #5\n");
+					#endif
 					if (buffer_list[i] == 0)
 						pthread_cond_signal(&index_cond_list[i]);
+					#if DEBUG
+					printf("Nima Says No #6\n");
+					#endif DEBUG
 					buffer_list[i]++;
 					pthread_mutex_unlock(&index_mutex_list[i]);
 					break;
@@ -100,6 +115,9 @@ void producer(void* args)
 					pthread_yield();
 				}
 			}
+			#if DEBUG
+			printf("Nima Says No #4\n");
+			#endif
 			pthread_cond_signal(&buffer_cond);
 			pthread_mutex_unlock(&buffer_mutex);
 		}
@@ -214,7 +232,9 @@ int main(int argc, char const *argv[])
 	
 	// create an array of buffers
 	buffer_list = (int*)malloc(num_of_buffers * sizeof(int*));
-	//index_mutex_list = (sem_t*)malloc(num_of_buffers * sizeof(sem_t)); 
+	index_mutex_list = (pthread_mutex_t*)malloc(num_of_buffers * sizeof(pthread_mutex_t)); 
+	index_cond_list = (pthread_cond_t*)malloc(num_of_buffers * sizeof(pthread_cond_t));
+
 	//sem_t buffer_index_sem[num_of_buffers];
 
 	int i;
@@ -223,7 +243,8 @@ int main(int argc, char const *argv[])
 		buffer_list[i] = 0;
 
 		// initializing semaphores
-		//pthread_mutex_init(&index_mutex_list[i],NULL);
+		pthread_mutex_init(&index_mutex_list[i],NULL);
+		pthread_cond_init(&index_cond_list[i],NULL);
 	}
 
 	// whole buffer list
