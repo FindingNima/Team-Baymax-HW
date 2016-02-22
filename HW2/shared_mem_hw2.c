@@ -9,14 +9,22 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <semaphore.h>
+#include <fcntl.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/types.h>
 
+// constants
+#define TOTAL 1000
+#define SNAME "/mysem2"
+
+// global variables
+int total_produced;
+
 // prototypes
-void producer(char*);
-void consumer(char*);
+void producer(int*);
+void consumer(int*);
 
 int binary_semaphore_allocation(key_t, int);
 int binary_semaphore_deallocate(int);
@@ -30,27 +38,58 @@ int var = 0;
 // --- PRODUCER -----------------------------------------------------------------------
 //  Will simply increment an integer value in the shared memory
 // ------------------------------------------------------------------------------------
-void producer(char* sh_mem)
+void producer(int* sh_mem)
 {
-    int i;
-    for (i = 0; i < 10000000000; i++)
-    {
-      sh_mem[0] += 1;
-      printf("In spawn, in parent: %d\n", sh_mem[0]);
-    }
+   // int i;
+   // for (i = 0; i < 10000000000; i++)
+   // {
+   //   sh_mem[0] += 1;
+   //   printf("In spawn, in parent: %d\n", sh_mem[0]);
+   // }
+
+   // open semaphore 
+   sem_t *sem = sem_open(SNAME,0);
+   
+   while (total_produced < TOTAL)
+   {
+	   //Lock Semaphore
+	   sem_wait(sem);
+	   
+	   printf("Produced %d\n",++sh_mem[0]);
+	   total_produced++;
+
+	   //Unlock Semaphore
+   	   sem_post(sem);
+   }
+
 }
 
 // --- CONSUMER -----------------------------------------------------------------------
 //  Will simply decrement an integer in the shared memory
 // ------------------------------------------------------------------------------------
-void consumer(char* sh_mem)
+void consumer(int* sh_mem)
 {
-    int i;
-    for (i = 0; i < 10000000000; i++)
+    // int i;
+    // for (i = 0; i < 10000000000; i++)
+    // {
+    //   sh_mem[0] -= 1;
+    //   printf ("In spawn, in child: %d\n", sh_mem[0]);
+    // }    
+
+    // open semaphore
+    sem_t *sem = sem_open(SNAME,0);
+
+    while (!(sh_mem[0] == 0 && total_produced == TOTAL))
     {
-      sh_mem[0] -= 1;
-      printf ("In spawn, in child: %d\n", sh_mem[0]);
-    }    
+	// Lock Semaphore
+	sem_wait(sem);
+
+	if (sh_mem[0] > 0)
+		printf("Consumed %d\n",sh_mem[0]--);
+	// Unlock Semaphore
+    	sem_post(sem);
+
+    }
 }
 
 // --- SPAWN --------------------------------------------------------------------------
@@ -58,7 +97,7 @@ void consumer(char* sh_mem)
 //  process will call the producer() function and the child process will call the
 //  the consumer() function. 
 // ------------------------------------------------------------------------------------
-int spawn(char* sh_mem)
+int spawn(int* sh_mem)
 {
   pid_t child_pid; //16 bit value ID --> typecast to int(32 bits)
   sh_mem[0] = var;
@@ -158,17 +197,23 @@ int binary_semaphore_post(int semid)
 int main()
 {
   int segment_id;    //ID to Shared Memory Segment
-  char* shared_memory;    //Starting Address of Shared Memory  Recall char = 1 byte
+  //char* shared_memory;    //Starting Address of Shared Memory  Recall char = 1 byte
+  int* shared_memory;
   struct shmid_ds shmbuffer;
   int segment_size;
-  const int shared_segment_size= 0x6400;    //bytes allocate rounded up to integer multip of page size
+  //const int shared_segment_size= 0x3D0900;    //bytes allocate rounded up to integer multip of page size
+  const int shared_segment_size = sizeof(int) * (2 + 1000); // Size doesn't really matter, need one point
 
+  // create semaphore
+  sem_t *sem = sem_open(SNAME,O_CREAT,0644,1);
+  
   //ALLOCATE SHARED MEMORY SEGMENT
   segment_id = shmget(IPC_PRIVATE, shared_segment_size, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
 
 
   //ATTACH SHARED MEMORY SEGMENT
-  shared_memory = (char*) shmat (segment_id, 0, 0);
+  //shared_memory = (char*) shmat (segment_id, 0, 0);
+  shared_memory = (int*) shmat(segment_id, NULL,0);
   printf( " shared memory attached at address %p\n", shared_memory);
 
   //DETERMINE SHARED MEMORY SEGMENT SIZE
@@ -186,7 +231,7 @@ int main()
 
 
   //REATTACH SHARED MEMORY SEGMENT, AT A DIFFERENT ADDRESS!!!   //Specify Page Address in process Adress Space, 0x50000, to attach the shared memory
-  shared_memory = (char*)shmat(segment_id,(void*)0x50000,0);
+  shared_memory = (int*)shmat(segment_id,(void*)0x50000,0);
   printf("shared memory reattached at address %p\n", shared_memory);
 
   
