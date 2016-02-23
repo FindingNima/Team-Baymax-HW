@@ -18,9 +18,9 @@
 #include <time.h>
 
 // constants
-#define TOTAL 1000
-#define SNAME "/mysem3"
-#define FILENAME "/mapped_mem_folder"
+#define TOTAL 10000
+#define SNAME "/mysem9"
+#define FILENAME "/mapped_mem_folder7"
 #define FILE_LENGTH 0x3D0900
 
 //const int shared_segment_size= 0x3D0900;    //bytes allocate rounded up to integer multip of page size
@@ -57,14 +57,21 @@ void producer(char* sh_mem)
 
    // open semaphore 
    sem_t *sem = sem_open(SNAME,0);
-   
+
    while (total_produced < TOTAL)
    {
-	   int shared = 0;
 	   //Lock Semaphore
 	   sem_wait(sem);
+
+	   // load value
+	   int shared;
+	   sscanf(sh_mem,"%d",&shared);
+
 	   printf("Produced %d\n",++shared);
 	   total_produced++;
+
+	   // write value
+	   sprintf(sh_mem,"%d\n",shared);
 
 	   //Unlock Semaphore
    	   sem_post(sem);
@@ -87,16 +94,26 @@ void consumer(char* sh_mem)
     // open semaphore
     sem_t *sem = sem_open(SNAME,0);
 
-    while (!(sh_mem[0] == 0 && total_produced == TOTAL))
+
+    // load value
+    int shared;
+    sem_wait(sem);
+    sscanf(sh_mem,"%d",&shared);
+    sem_post(sem);
+
+    while (!(shared == 0 && total_produced == TOTAL))
     {
 	// Lock Semaphore
 	sem_wait(sem);
-
-
-	int shared = 0;
+	
+	// load value
+	sscanf(sh_mem,"%d",&shared);
+	
 	if (shared > 0)
 		printf("Consumed %d\n",shared--);
 
+	// write value
+	sprintf(sh_mem,"%d\n",shared);
 
 	// Unlock Semaphore
     	sem_post(sem);
@@ -112,15 +129,6 @@ void consumer(char* sh_mem)
 int spawn(char* sh_mem)
 {
   pid_t child_pid; //16 bit value ID --> typecast to int(32 bits)
-  printf("1\n");
-  sh_mem[0] = (char)0;
-  printf("2\n");
-  sh_mem[1] = 0;
-  printf("3\n");
-  sh_mem[2] = 0;
-  printf("4\n");
-  sh_mem[3] = 0;
-  printf("5\n");
   child_pid = fork();
   int i;
 
@@ -237,8 +245,8 @@ int main()
   
   int fd;
   void* file_memory;
-  int value = 0;
-  int integer;
+  int zero = 0;
+  int verify;
   //Seed random number gnerator
   srand(time(NULL));
 
@@ -255,18 +263,9 @@ int main()
   file_memory = mmap(0, FILE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   close(fd); //closing file access in HD
 
-
-  sscanf (file_memory, "%d", &integer); 
-  printf ("Value: %d\n", integer);
-
-  //Write 2 to Memory and Read it
-  printf("1\n");
-  //sprintf((char*)file_memory, "%d\n",2);
-  printf("2\n");
-  sscanf((char*)file_memory,"%d",&value);
-  printf("3\n");
-  printf("%d\n",value);
-
+  sprintf((char*)file_memory,"%d\n",zero);
+  // sscanf(file_memory,"%d",&verify);
+  // printf("%d %d\n",zero,verify);
 
 
 
