@@ -60,12 +60,11 @@ void producer(char* sh_mem)
    
    while (total_produced < TOTAL)
    {
+	   int shared = 0;
 	   //Lock Semaphore
 	   sem_wait(sem);
-	   int shared = loadInt(sh_mem);
 	   printf("Produced %d\n",++shared);
 	   total_produced++;
-	   storeInt(shared,sh_mem);
 
 	   //Unlock Semaphore
    	   sem_post(sem);
@@ -93,12 +92,11 @@ void consumer(char* sh_mem)
 	// Lock Semaphore
 	sem_wait(sem);
 
-	int shared = loadInt(sh_mem);
 
+	int shared = 0;
 	if (shared > 0)
 		printf("Consumed %d\n",shared--);
 
-	storeInt(shared,sh_mem);
 
 	// Unlock Semaphore
     	sem_post(sem);
@@ -239,7 +237,8 @@ int main()
   
   int fd;
   void* file_memory;
-
+  int value = 0;
+  int integer;
   //Seed random number gnerator
   srand(time(NULL));
 
@@ -252,10 +251,22 @@ int main()
 
 
   //CREATE MEMORY MAPPING
-  file_memory = mmap(0, FILE_LENGTH, PROT_WRITE, MAP_SHARED, fd, 0);
-  char* test = (char*) file_memory;
-  printf("%c\n",test[0]);
+  //file_memory = mmap(0, FILE_LENGTH, PROT_WRITE, MAP_SHARED, fd, 0);
+  file_memory = mmap(0, FILE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   close(fd); //closing file access in HD
+
+
+  sscanf (file_memory, "%d", &integer); 
+  printf ("Value: %d\n", integer);
+
+  //Write 2 to Memory and Read it
+  printf("1\n");
+  //sprintf((char*)file_memory, "%d\n",2);
+  printf("2\n");
+  sscanf((char*)file_memory,"%d",&value);
+  printf("3\n");
+  printf("%d\n",value);
+
 
 
 
